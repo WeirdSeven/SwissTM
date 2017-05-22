@@ -9,6 +9,7 @@
 #include <cstdlib>
 #include <iostream>
 #include <pthread.h>
+#include <getopt.h>
 
 // rbtree
 #include "tm_spec.h"

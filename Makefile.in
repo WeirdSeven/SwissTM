@@ -234,14 +234,14 @@ INCLUDE_OUT_FILE = $(INCLUDE_DIR)/stm.h
 ########################################
 # set the build profile (default=normal)
 CPPFLAGS_normal  =  -ggdb -O3
-CPPFLAGS_fast    =  -DNDEBUG -O3
-CPPFLAGS_debug   =  -g -O0
+CPPFLAGS_fast    =   -O3
+CPPFLAGS_debug   =  -g -O3
 CPPFLAGS_gp0     =  -ggdb -pg -O0
 CPPFLAGS_gp      =  -ggdb -pg -O3
 
 ifeq ($(PROFILE), )
 	ifeq ($(COMPILER), gnu)
-		PROFILE = fast
+		PROFILE = debug
 	endif
 
 	ifeq ($(COMPILER), intel)

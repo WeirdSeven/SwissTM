@@ -3,38 +3,76 @@
 #include <pthread.h>
 #include <sys/time.h>
 #include <sys/resource.h>
-#include "stm.h"
+#include <random>
 
-#define ARRAY_SZ 10000
+#include "stm.h"
+#include "randgen.hh"
+
+#define ARRAY_SZ 10000000
+
+#define NON_CONFLICTING 0
 
 int nthreads = 4;
+int ntrans = 10000000;
+int opspertrans = 100;
+double write_percent = 0.5;
+
+unsigned initial_seeds[64];
 
 typedef struct {
   int thread_id;
-  int num_threads;
   Word *array;
 } arg_t;
 
-void *InterferingWrites(void *arg) {
+inline void doRead(Word *array, int slot) {
+  wlpdstm_read_word(&array[slot]);
+}
+
+inline void doWrite(Word *array, int slot) {
+  Word v0 = wlpdstm_read_word(&array[slot]);
+  wlpdstm_write_word(&array[slot], v0 + 1);
+}
+
+void *RandomRWs(void *arg) {
   arg_t *d = (arg_t *)arg;
   int me = d->thread_id;
-  int nthreads = d->num_threads;
   Word * array = d->array;
+
+#if NON_CONFLICTING
+  long range = ARRAY_SZ/nthreads;
+  std::uniform_int_distribution<long> slotdist(me*range, (me + 1) * range - 1);
+#else
+  std::uniform_int_distribution<long> slotdist(0, ARRAY_SZ-1);
+#endif
+  uint32_t write_thresh = (uint32_t) (write_percent * Rand::max());
+  Rand transgen(initial_seeds[2*me], initial_seeds[2*me + 1]);
+
+  int N = ntrans/nthreads;
+  int OPS = opspertrans;
 
   wlpdstm_thread_init();
 
-  for (int j = 0; j < 10000; j++) {
+  for (int i = 0; i < N; ++i) {
+    Rand transgen_snap = transgen;
+
     BEGIN_TRANSACTION;
 
-    for (int i = 0; i < ARRAY_SZ; ++i) {
-      if ((i % nthreads) >= me) {
-        Word cur = wlpdstm_read_word(&array[i]);
-        wlpdstm_write_word(&array[i], cur + 1);
+    transgen = transgen_snap;
+    for (int j = 0; j < OPS; ++j) {
+      int slot = slotdist(transgen);
+      auto r = transgen();
+
+      if (r > write_thresh) {
+        doRead(array, slot);
+      } else {
+        doWrite(array, slot);
+        ++j;
       }
     }
 
     END_TRANSACTION;
   }
+
   wlpdstm_thread_shutdown();   
   return NULL;
 }
@@ -44,6 +82,10 @@ void print_time(struct timeval tv1, struct timeval tv2) {
 }
 
 int main() {
+  for (unsigned i = 0; i < 64; ++i) {
+    initial_seeds[i] = random();
+  }
+
   wlpdstm_global_init();
   wlpdstm_thread_init();
 
@@ -59,9 +101,8 @@ int main() {
   Word *array = (Word *)wlpdstm_tx_malloc(sizeof(Word) * ARRAY_SZ);
   for (int i = 0; i < nthreads; i++) {
     arg[i].thread_id = i;
-    arg[i].num_threads = 4;
     arg[i].array = array;
-    pthread_create(&threads[i], NULL, InterferingWrites, &arg[i]);
+    pthread_create(&threads[i], NULL, RandomRWs, &arg[i]);
   }
   for (int i = 0; i < nthreads;i ++) {
     pthread_join(threads[i], NULL);
@@ -81,3 +122,4 @@ int main() {
   wlpdstm_global_shutdown();
   return 0;
 }
+

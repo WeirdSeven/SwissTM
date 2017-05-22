@@ -17,6 +17,8 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
+#include <stdio.h>
+#include <sys/time.h>
 
 #include "../common/word.h"
 #include "../common/tid.h"
@@ -809,6 +811,8 @@ inline void wlpdstm::TxMixinv::TxCommit() {
 }
 
 inline wlpdstm::TxMixinv::TryCommitResult wlpdstm::TxMixinv::TxTryCommit() {
+	//struct timeval tv1, tv2;
+	//gettimeofday(&tv1, NULL);
 	Word ts = valid_ts;
 	bool read_only = write_log.empty();
 	
@@ -928,6 +932,8 @@ inline wlpdstm::TxMixinv::TryCommitResult wlpdstm::TxMixinv::TxTryCommit() {
 	
 	succ_aborts = 0;
 	
+	//gettimeofday(&tv2, NULL);
+	//printf("%f\n", (tv2.tv_sec - tv1.tv_sec) + (tv2.tv_usec - tv1.tv_usec) / 1000000.0);
 	return COMMIT;
 }
 
@@ -986,6 +992,7 @@ inline void wlpdstm::TxMixinv::RollbackCommitting() {
 }
 
 inline void wlpdstm::TxMixinv::RestartRunning() {
+        stats.IncrementStatistics(StatisticsType::CM_ON_ROLLBACK);
 	profiling.TxRestartStart();
 #ifdef PRIVATIZATION_QUIESCENCE
 	*quiescence_ts = MINIMUM_TS;
@@ -1021,6 +1028,7 @@ inline void wlpdstm::TxMixinv::RestartRunning() {
 }
 
 inline void wlpdstm::TxMixinv::RestartCommitting() {
+        stats.IncrementStatistics(StatisticsType::CM_ON_ROLLBACK);
 	profiling.TxRestartStart();
 #ifdef PRIVATIZATION_QUIESCENCE
 	*quiescence_ts = MINIMUM_TS;
@@ -1550,6 +1558,7 @@ inline void wlpdstm::TxMixinv::AbortJump() {
 
 
 inline bool wlpdstm::TxMixinv::ShouldAbortWrite(WriteLock *write_lock) {
+        stats.IncrementStatistics(StatisticsType::CM_SHOULD_ABORT);
 	if(aborted_externally) {
 		return true;
 	}
@@ -1591,6 +1600,7 @@ inline bool wlpdstm::TxMixinv::CMStrongerThan(TxMixinv *other) {
 }
 
 inline void wlpdstm::TxMixinv::CmStartTx() {
+        stats.IncrementStatistics(StatisticsType::CM_START);
 #ifdef SIMPLE_GREEDY
 	if(succ_aborts == 0) {
 		cm_phase = CM_PHASE_GREEDY;
@@ -1604,6 +1614,7 @@ inline void wlpdstm::TxMixinv::CmStartTx() {
 }
 
 inline void wlpdstm::TxMixinv::CmOnAccess() {
+        stats.IncrementStatistics(StatisticsType::CM_ON_WRITE);
 #ifndef SIMPLE_GREEDY
 	if(cm_phase == CM_PHASE_INITIAL) {
 		if(++locations_accessed > CM_ACCESS_THRESHOLD) {

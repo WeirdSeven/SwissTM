@@ -25,6 +25,10 @@ namespace wlpdstm {
 			ABORT_READ_LOCKED,
 			ABORT_COMMIT_VALIDATE,
 			CLOCK_OVERFLOWS,
+                        CM_SHOULD_ABORT,
+                        CM_ON_WRITE,
+                        CM_ON_ROLLBACK,
+                        CM_START,
 #ifdef INFLUENCE_DIAGRAM_STATS
 			READ_LOG_SIZE,
 			READ_LOG_SIZE_ABORT_READ,
@@ -93,6 +97,10 @@ namespace wlpdstm {
 				"AbortReadLocked",
 				"AbortCommitValidate",
 				"ClockOverflows",
+                                "CM::should_abort",
+                                "CM::on_write",
+                                "CM::on_rollback",
+                                "CM::start",
 #ifdef INFLUENCE_DIAGRAM_STATS
 				"ReadLogSize",
 				"ReadLogSizeAbortRead",

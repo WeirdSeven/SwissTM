@@ -1,9 +1,9 @@
 #ifndef STM_H_
 #define STM_H_
 
+#define WLPDSTM_LINUXOS
 #define WLPDSTM_X86
 #define WLPDSTM_64
-#define WLPDSTM_LINUXOS
 #include "../src/api/wlpdstm.h"
 
 #define BEGIN_TRANSACTION             \
