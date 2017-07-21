@@ -8,12 +8,12 @@
 #include "stm.h"
 #include "randgen.hh"
 
-#define ARRAY_SZ 10000000
+#define ARRAY_SZ 1000
 
-#define NON_CONFLICTING 0
+#define NON_CONFLICTING 1
 
 int nthreads = 4;
-int ntrans = 10000000;
+int ntrans = 1000000;
 int opspertrans = 100;
 double write_percent = 0.5;
 
@@ -40,7 +40,7 @@ void *RandomRWs(void *arg) {
 
 #if NON_CONFLICTING
   long range = ARRAY_SZ/nthreads;
-  std::uniform_int_distribution<long> slotdist(me*range, (me + 1) * range - 1);
+  std::uniform_int_distribution<long> slotdist(me*range + 10, (me + 1) * range - 1 - 10);
 #else
   std::uniform_int_distribution<long> slotdist(0, ARRAY_SZ-1);
 #endif
@@ -64,9 +64,12 @@ void *RandomRWs(void *arg) {
 
       if (r > write_thresh) {
         doRead(array, slot);
+	//doWrite(array, slot);
+	//++j;
       } else {
-        doWrite(array, slot);
-        ++j;
+        //doWrite(array, slot);
+        //++j;
+	doRead(array, slot);
       }
     }
 

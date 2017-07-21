@@ -19,6 +19,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <sys/time.h>
+#include <unistd.h>
 
 #include "../common/word.h"
 #include "../common/tid.h"
@@ -811,11 +812,17 @@ inline void wlpdstm::TxMixinv::TxCommit() {
 }
 
 inline wlpdstm::TxMixinv::TryCommitResult wlpdstm::TxMixinv::TxTryCommit() {
-	//struct timeval tv1, tv2;
-	//gettimeofday(&tv1, NULL);
+	//struct timespec ts1, ts2, tsd;
+	//clock_gettime(CLOCK_REALTIME, &ts1);
+
 	Word ts = valid_ts;
 	bool read_only = write_log.empty();
-	
+
+        //volatile int count = 0;
+        //for (int i = 0; i < 300; i++) {
+        //    count += i;
+        //}	
+
 	if(!read_only) {
 #ifdef CONFLICT_DETECTION_LAZY
 		WriteLog::iterator iter;
@@ -932,8 +939,15 @@ inline wlpdstm::TxMixinv::TryCommitResult wlpdstm::TxMixinv::TxTryCommit() {
 	
 	succ_aborts = 0;
 	
-	//gettimeofday(&tv2, NULL);
-	//printf("%f\n", (tv2.tv_sec - tv1.tv_sec) + (tv2.tv_usec - tv1.tv_usec) / 1000000.0);
+	/*clock_gettime(CLOCK_REALTIME, &ts2);
+	if (ts2.tv_nsec < ts1.tv_nsec) {
+		tsd.tv_sec = ts2.tv_sec - ts1.tv_sec - 1;
+		tsd.tv_nsec = 1000000000 + ts2.tv_nsec - ts1.tv_nsec;
+	} else {
+		tsd.tv_sec = ts2.tv_sec - ts1.tv_sec;
+		tsd.tv_nsec = ts2.tv_nsec - ts1.tv_nsec;
+	}
+	printf("%.9f\n", tsd.tv_sec + (tsd.tv_nsec / 1000000000.0));*/
 	return COMMIT;
 }
 
@@ -1107,6 +1121,7 @@ inline wlpdstm::TxMixinv::WriteLogEntry *wlpdstm::TxMixinv::LockMemoryStripe(Wri
 		WriteLogEntry *log_entry = (WriteLogEntry *)lock_value;
 		
 		if(LockedByMe(log_entry)) {
+			//CmOnAccess();
 			return log_entry;
 		}
 	}
